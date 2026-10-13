@@ -44,6 +44,7 @@ Prefer a concise collection-level overview or grouped learning timeline over a f
 |---|---|
 | [JS-DEV](https://github.com/Mystify7777/JS-DEV) | JavaScript learning/challenge exercises |
 | [MinorProjects](https://github.com/Mystify7777/MinorProjects) | Collection of small web-development projects |
+| [Mystify7777](https://github.com/Mystify7777/Mystify7777) | GitHub profile repository | Inspect profile README and its purpose; keep any personal details intentional and public-facing. |
 | [Mystify7777.github.io](https://github.com/Mystify7777/Mystify7777.github.io) | Legacy portfolio / web projects |
 | [CyberCell](https://github.com/Mystify7777/CyberCell) | Bootcamp demo project |
 | [Prodigy](https://github.com/Mystify7777/Prodigy) | Internship project collection |
