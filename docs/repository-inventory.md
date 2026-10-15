@@ -12,7 +12,6 @@ These repositories appear to contain substantial applications or reusable engine
 
 | Repository | Initial classification | First-pass evidence / next verification |
 |---|---|---|
-| [Mystify Observatory](https://github.com/Mystify7777/Mystify) | Portfolio operating environment | Master Context v2 and architecture documents provide a rich design record. Reconcile planned architecture with current source and implementation status. |
 | [DevLens](https://github.com/Mystify7777/devlens) | Embeddable developer diagnostics toolkit | README describes a capture → event bus → event store → panel architecture. Verify current package status, tests, and README claims. |
 | [HaloTask Pro](https://github.com/Mystify7777/Halotask-Pro) | Offline-first productivity application | README and repository structure describe task management, reminders, offline persistence, and sync. Verify features and deployment claims; do not reproduce credentials or secrets. |
 | [CyberShield](https://github.com/Mystify7777/CyberShield) | Cybersecurity and trust-analysis platform | Includes client, server, AI service, scripts, and extensive docs. Investigate TrustScan report generation and AI service configuration against current code. |
@@ -22,6 +21,12 @@ These repositories appear to contain substantial applications or reusable engine
 | [SafeTap](https://github.com/Mystify7777/SafeTap) | QR-based emergency response PWA | README describes the product concept. Verify what is implemented versus proposed, especially AI and live-response behavior. |
 | [Components](https://github.com/Mystify7777/Components) | Reusable React components / monorepo | Has apps, packages, design-system rules, and workspace configuration. Inspect package boundaries and actual component maturity. |
 | [Stardust Typer](https://github.com/Mystify7777/Stardust-Typer) | React arcade typing game | README and planning files exist. Verify gameplay, online leaderboard claims, and current completeness. |
+
+## Deferred: projects still in active development
+
+A project story should not be published merely because its architecture is interesting or its repository is public. **Mystify Observatory is excluded from the active story lineup while it remains in development.** Reconsider it only after its implementation reaches an explicitly agreed completion threshold and the story can be based on a fresh source-and-test review. The threshold percentage has not yet been specified.
+
+The existing Observatory story was a preliminary research draft, not a publication-ready project story; it has been removed from the active stories directory. Its research can be repeated when the project is mature enough.
 
 ## Priority B: collaborative work and external contributions
 
@@ -44,7 +49,7 @@ Prefer a concise collection-level overview or grouped learning timeline over a f
 |---|---|
 | [JS-DEV](https://github.com/Mystify7777/JS-DEV) | JavaScript learning/challenge exercises |
 | [MinorProjects](https://github.com/Mystify7777/MinorProjects) | Collection of small web-development projects |
-| [Mystify7777](https://github.com/Mystify7777/Mystify7777) | GitHub profile repository | Inspect profile README and its purpose; keep any personal details intentional and public-facing. |
+| [Mystify7777](https://github.com/Mystify7777/Mystify7777) | GitHub profile repository; inspect its README and purpose, keeping personal details intentional and public-facing. |
 | [Mystify7777.github.io](https://github.com/Mystify7777/Mystify7777.github.io) | Legacy portfolio / web projects |
 | [CyberCell](https://github.com/Mystify7777/CyberCell) | Bootcamp demo project |
 | [Prodigy](https://github.com/Mystify7777/Prodigy) | Internship project collection |
@@ -70,15 +75,16 @@ Prefer a concise collection-level overview or grouped learning timeline over a f
 
 ## Recommended documentation order
 
-1. Mystify Observatory — establish the story format and reconcile design intent with implementation.
-2. DevLens — strong reusable architecture and testable engineering boundaries.
-3. HaloTask Pro — offline-first state, sync, and recovery behavior.
-4. CyberShield — service boundaries, TrustScan, AI integration, and report generation.
-5. AquaVeda v2 — architecture decisions, auth foundation, and staged domain implementation.
-6. StockSphere and ShopStock — compare enterprise-style inventory design with offline-first small-shop constraints.
-7. SafeTap, Components, and Stardust Typer — after implementation-status verification.
-8. Collaborative repositories — contribution-first stories backed by PR/commit evidence.
-9. Learning collections — concise summaries and timeline, not inflated standalone narratives.
+1. DevLens — strong reusable architecture and testable engineering boundaries.
+2. HaloTask Pro — offline-first state, sync, and recovery behavior.
+3. CyberShield — service boundaries, TrustScan, AI integration, and report generation.
+4. AquaVeda v2 — architecture decisions, auth foundation, and staged domain implementation.
+5. StockSphere and ShopStock — compare enterprise-style inventory design with offline-first small-shop constraints.
+6. SafeTap, Components, and Stardust Typer — after implementation-status verification.
+7. Collaborative repositories — contribution-first stories backed by PR/commit evidence.
+8. Learning collections — concise summaries and timeline, not inflated standalone narratives.
+
+Mystify Observatory is intentionally omitted from this sequence until its agreed implementation threshold is met.
 
 ## Inventory limitations
 
