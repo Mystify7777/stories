@@ -28,7 +28,7 @@ The packages have separate responsibilities:
 
 - **Core** defines the normalized event model, synchronous EventBus, EventStore, and plugin contract.
 - **Runtime** observes browser runtime failures, including `window.error` and unhandled promise rejections.
-- **Console** intercepts console methods while preserving the application's native console output.
+- **Console** intercepts console methods while its contract requires preserving the application's native console output.
 - **Network** observes Fetch and asynchronous XMLHttpRequest operations and classifies their outcomes.
 - **React** reports client-side errors caught by a React error boundary, including React's `componentStack`.
 - **Panel** reads stored events and renders them in a Shadow-DOM-isolated overlay.
@@ -44,23 +44,23 @@ The event model is versioned and shared across capture sources. Runtime failures
 
 The EventBus is synchronous and dependency-free. The EventStore is intentionally separate from it and acts as a plain data structure. That separation also allows events from sources other than live capture, such as an imported session, to enter the Store without pretending they were freshly observed by a plugin.
 
-### 2. Idempotent lifecycle for global capture plugins
+### 2. Explicit lifecycle and host-behavior contracts
 
-Runtime, Console, and Network use a narrow `install()` / `uninstall()` contract, with both operations intended to be idempotent. Console and Network need to intercept existing APIs, so their implementations must preserve and restore original behavior rather than silently taking ownership of the host application.
+Runtime, Console, and Network use a narrow `install()` / `uninstall()` contract, with both operations intended to be idempotent. Console and Network intercept existing APIs, so preserving the host application's behavior and restoring monkey-patched references are separate requirements. They are design contracts described by the project, not universal guarantees established by this documentation-only review.
 
-Network makes this tradeoff explicit: it wraps Fetch and XMLHttpRequest because neither exposes the event-listener hook needed for this kind of observation. Uninstall restores the original references. The invasive mechanism is isolated inside the Network package instead of spreading into Core or Panel.
+Network makes its tradeoff explicit: it wraps Fetch and XMLHttpRequest because neither exposes the event-listener hook needed for this kind of observation. Its uninstall path is intended to restore the original references. The invasive mechanism is isolated inside the Network package instead of spreading into Core or Panel.
 
 The React package does not force itself into that same interface. A React error boundary is a component managed by React's lifecycle, not a global listener or API patch. It reports through the shared EventBus and is explicitly client-only; it does not claim to capture React Server Component or server-rendering errors.
 
 ### 3. Network events represent completed operations
 
-Network requests have a duration, unlike a runtime error or console call. The accepted Network ADR chooses to report one immutable event when a request settles, rather than emit a start/end pair or mutate a stored event in place.
+Network requests have a duration, unlike a runtime error or console call. The amended Network ADR's accepted decision is authoritative where it supersedes the original draft language. The current documented contract classifies a completed request using six outcomes: `success`, `http-error`, `network-error`, `aborted`, `timeout`, and `opaque`. Severity is a separate interpretation, not simply another name for the factual outcome.
 
-This preserves the existing event and append-only Store model. It also establishes a known limitation: an operation that never settles, or a page torn down before settlement, may never produce a Network event. That is a documented tradeoff, not a capability to imply away.
+The design reports one immutable event when a request settles, rather than emitting a start/end pair or mutating a stored event in place. This preserves the existing event and append-only Store model. It also establishes a known limitation: an operation that never settles, or a page torn down before settlement, may never produce a Network event. That is a documented tradeoff, not a capability to imply away.
 
-The captured network record includes method, canonicalized URL, available HTTP status, duration, and an explicit outcome. Query-parameter values are redacted by default while parameter names are preserved. Request and response bodies and arbitrary headers are not captured. This conservative default matters because a network request may contain data the application never intended to expose in a diagnostic panel.
+The captured network record includes method, canonicalized URL, available HTTP status, duration, and outcome. Query-parameter values are redacted by default while parameter names are preserved. Request and response bodies and arbitrary headers are not captured. This conservative default matters because a network request may contain data the application never intended to expose in a diagnostic panel.
 
-The documented outcome categories include success, HTTP error, network error, abort, timeout, and opaque responses. Fetch and XHR expose different signals, so some distinctions are best-effort rather than perfectly equivalent across both APIs.
+Fetch and XHR expose different signals, so some outcome distinctions are best-effort rather than perfectly equivalent across both APIs.
 
 ### 4. React integration targets information that ordinary console capture can miss
 
@@ -70,7 +70,7 @@ The ADR records why this package is a capture mechanism rather than a wrapper ar
 
 ### 5. Session import preserves the evidence being restored
 
-The repository documents session import as complete. Its stated contract validates the imported session before adding it to an empty EventStore, preserves event IDs and timestamps, and maintains array order. It avoids adding a partially validated session to the live Store. This is useful for inspecting previously exported diagnostic sessions without inventing new identities or timestamps for old events.
+The repository documents session import as complete. Its stated contract validates the imported session before adding it to an empty EventStore, preserves event IDs and timestamps, and maintains array order. It avoids adding a partially validated session to the Store. This is useful for inspecting previously exported diagnostic sessions without inventing new identities or timestamps for old events.
 
 The import path is intentionally narrow: merging an imported session into a Store that already contains live events is documented as out of scope. The feature should not be described as general-purpose session merging.
 
@@ -88,35 +88,35 @@ The project's engineering discipline is not simply “write lots of docs.” The
 
 ## Current documented status
 
-The README currently marks Core, Runtime, Console, Panel, Network, and React complete and tested, with the Playground working. It reports **879 test cases** across the suite and provides workspace commands for build, test, formatting, and TypeScript validation.
+The README marks Core, Runtime, Console, Panel, Network, and React complete and tested, with the Playground working. However, its published test count has not yet been reconciled with the latest implementation. A recent local verification was reported as **873 passing tests**; I did not independently reproduce that result during this review.
 
-Those are repository claims, not a fresh test result from this review. The latest workflow metadata I inspected showed a successful Formatting Check run on 2026-09-25. I did not independently execute `pnpm test`, `pnpm build`, `pnpm typecheck`, or `pnpm format:check`, so this story does not assert that all commands pass on the current checkout.
+The latest workflow metadata I inspected showed a successful Formatting Check run on 2026-09-25. I did not independently execute `pnpm test`, `pnpm build`, `pnpm typecheck`, or `pnpm format:check`, so this story does not assert that all commands pass on the current checkout.
 
 The root manifest uses pnpm workspaces and defines `build`, `test`, `clean`, `format`, `format:check`, and `typecheck`. There is no dedicated lint script; the repository's ADR explains the current policy and identifies the remaining coverage gaps rather than claiming linting is universally unnecessary.
 
 ## Boundaries and limitations
 
-The story should preserve the system's explicit non-goals:
+Important documented non-goals include:
 
-- No request or response body capture, and no arbitrary header capture.
-- No WebSocket, Server-Sent Events, or endpoint-grouping implementation in the Network package.
+- No request or response body capture, or arbitrary header capture.
+- No WebSocket, Server-Sent Events, or endpoint-grouping implementation in Network.
 - No React Server Component or server-rendering error capture through the React boundary.
-- No merging an imported session into a non-empty Store as part of the current import contract.
+- No merging an imported session into a non-empty Store under the current import contract.
 - No reactive React adapter for Panel UI state without evidence of a real consumer need.
-- No claim that the reported 879 tests passed in this review; the count is taken from the README.
 
 These boundaries strengthen the story. They show a system with explicit scope and tradeoffs rather than a fictional universal diagnostics solution.
 
-## What to verify before finalizing this story
+## Verification still outstanding
+
+The following checks have **not** been completed as part of this review:
 
 - Run the current workspace build, test, type-check, and formatting-check commands; record the actual results and environment.
-- Confirm the README's test count against a current run.
+- Reconcile the reported 873 passing tests with a fresh run and update the README's stale count separately in the source repository when appropriate.
 - Inspect representative tests for Core, Runtime, Console, Network, React, Panel, and Session Import, including failure and cleanup paths.
 - Confirm the latest CI state for every relevant workflow, not only formatting.
 - Exercise the Playground end-to-end and verify the documented capture paths, network outcome labels, query redaction, and session restore behavior.
-- Check that install/uninstall cycles preserve native browser APIs and that Console never suppresses native output.
+- Test that install/uninstall cycles restore monkey-patched browser APIs and that Console never suppresses native output.
 - Verify the public API and package manifests match the documentation, including the distinction between the Plugin contract and the React error-boundary lifecycle.
-- Keep future feature ideas clearly separate from implemented capabilities.
 
 ## Source trail
 
@@ -139,4 +139,4 @@ These boundaries strengthen the story. They show a system with explicit scope an
 
 ## Summary
 
-DevLens is best understood as a diagnostics engine with a replaceable presentation layer. Its strongest engineering story is the discipline of keeping capture, normalized events, storage, and UI separate while extending the same pipeline to harder cases such as network lifecycles, sensitive URL data, React component stacks, and imported sessions. The ADRs make the tradeoffs inspectable, and the explicit limits help keep the product honest. The next step is a fresh local verification pass before this draft is treated as final.
+DevLens is best understood as a diagnostics engine with a replaceable presentation layer. Its strongest engineering story is the discipline of keeping capture, normalized events, storage, and UI separate while extending the same pipeline to harder cases such as network lifecycles, sensitive URL data, React component stacks, and imported sessions. The ADRs make tradeoffs inspectable, and the explicit limits help keep the product honest. This remains a draft until the outstanding verification work is completed.
