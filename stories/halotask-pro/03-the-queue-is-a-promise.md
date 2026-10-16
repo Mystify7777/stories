@@ -28,16 +28,35 @@ The most consequential part of replay is the gap between deciding to send a requ
 
 HaloTask Pro addresses this with a bound session containing both user ID and token. The processor passes that session to task-service calls. The API request interceptor checks that the current session still matches and applies the bound token in the same synchronous step. If the identity or token changed, it rejects the request before sending it.
 
+```mermaid
+flowchart TD
+    A["User changes a task offline"] --> B["Persist task locally"]
+    B --> C["Append or coalesce queue entry"]
+    C --> D{"Network available?"}
+    D -- "No" --> E["Keep pending state"]
+    E --> D
+    D -- "Yes" --> F["Capture account ID + token"]
+    F --> G["Request interceptor checks same session"]
+    G --> H{"Session still matches?"}
+    H -- "No" --> I["Do not send; retain queue entry"]
+    H -- "Yes" --> J["Send mutation with bound token"]
+    J --> K{"Server response"}
+    K -- "Accepted" --> L["Reconcile task cache and remove acknowledged entry"]
+    K -- "401 / session changed" --> M["Retain failed entry and unattempted suffix"]
+    K -- "Transient failure" --> N["Retain for retry"]
+    K -- "Permanent client error" --> O["Discard invalid entry and surface remaining state"]
+```
+
 The queue is therefore a promise with conditions: preserve intent, replay it only under the identity that created it, and treat server acknowledgement as completion. That is a more demanding contract than “retry when online.”
 
 ### Evidence trail
 
-- [Queue model and coalescing rules](https://github.com/Mystify7777/Halotask-Pro/blob/main/halotasks-client/src/offline/syncQueue.ts)
-- [Queue replay and failure classification](https://github.com/Mystify7777/Halotask-Pro/blob/main/halotasks-client/src/offline/queueProcessor.ts)
-- [Bound session and request interceptor](https://github.com/Mystify7777/Halotask-Pro/blob/main/halotasks-client/src/services/api.ts)
-- [Queue behavior tests](https://github.com/Mystify7777/Halotask-Pro/blob/main/halotasks-client/src/offline/syncQueue.test.ts)
-- [Replay tests](https://github.com/Mystify7777/Halotask-Pro/blob/main/halotasks-client/src/offline/queueProcessor.test.ts)
-- [Request credential tests](https://github.com/Mystify7777/Halotask-Pro/blob/main/halotasks-client/src/offline/queueProcessor.credentials.test.ts)
+- [Queue model and coalescing rules](https://github.com/Mystify7777/Halotask-Pro/tree/e95ba08b107dcb0bd7e2941850bfb8246727b309/halotasks-client/src/offline/syncQueue.ts)
+- [Queue replay and failure classification](https://github.com/Mystify7777/Halotask-Pro/tree/e95ba08b107dcb0bd7e2941850bfb8246727b309/halotasks-client/src/offline/queueProcessor.ts)
+- [Bound session and request interceptor](https://github.com/Mystify7777/Halotask-Pro/tree/e95ba08b107dcb0bd7e2941850bfb8246727b309/halotasks-client/src/services/api.ts)
+- [Queue behavior tests](https://github.com/Mystify7777/Halotask-Pro/tree/e95ba08b107dcb0bd7e2941850bfb8246727b309/halotasks-client/src/offline/syncQueue.test.ts)
+- [Replay tests](https://github.com/Mystify7777/Halotask-Pro/tree/e95ba08b107dcb0bd7e2941850bfb8246727b309/halotasks-client/src/offline/queueProcessor.test.ts)
+- [Request credential tests](https://github.com/Mystify7777/Halotask-Pro/tree/e95ba08b107dcb0bd7e2941850bfb8246727b309/halotasks-client/src/offline/queueProcessor.credentials.test.ts)
 
 ### What remains unproven here
 
