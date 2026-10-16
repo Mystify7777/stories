@@ -4,7 +4,7 @@
 
 HaloTask Pro began as a task manager, but its most interesting engineering questions sit beyond the task form. What happens when a user creates a task without a connection? What if the request succeeds but the response never arrives? What if the account changes while queued work is waiting? How can progress history remain coherent across devices?
 
-This book follows those questions through the public repository's implementation, tests, documentation, and recorded development history. It is technical narrative, not a feature brochure: implemented behavior is distinguished from product claims, plans, and behavior that still needs production verification.
+This book follows the public repository's implementation, tests, documentation, and recorded development history. It is technical narrative, not a feature brochure: implemented behavior is distinguished from product claims, plans, and behavior that still needs production verification.
 
 ## Contents
 
@@ -19,11 +19,52 @@ This book follows those questions through the public repository's implementation
 9. [Tests as Executable Arguments](09-tests-as-executable-arguments.md)
 10. [The Honest Edge of the System](10-the-honest-edge-of-the-system.md)
 
+## Architecture at a glance
+
+### Offline mutation lifecycle
+
+```mermaid
+flowchart TD
+    A["User changes a task offline"] --> B["Persist task locally"]
+    B --> C["Append or coalesce queue entry"]
+    C --> D{"Network available?"}
+    D -- "No" --> E["Keep pending state"]
+    E --> D
+    D -- "Yes" --> F["Capture account ID + token"]
+    F --> G["Request interceptor checks same session"]
+    G --> H{"Session still matches?"}
+    H -- "No" --> I["Do not send; retain queue entry"]
+    H -- "Yes" --> J["Send mutation with bound token"]
+    J --> K{"Server response"}
+    K -- "Accepted" --> L["Reconcile task cache and remove acknowledged entry"]
+    K -- "401 / session changed" --> M["Retain failed entry and unattempted suffix"]
+    K -- "Transient failure" --> N["Retain for retry"]
+    K -- "Permanent client error" --> O["Discard invalid entry and surface remaining state"]
+```
+
+### Growth Tree award lifecycle
+
+```mermaid
+flowchart TD
+    A["Task transitions to completed"] --> B["Server validates task operation"]
+    B --> C["Atomic conditional user-document update"]
+    C --> D["Increment XP + append task ID + record pending day"]
+    D --> E["Compare-and-set derived streak/date fields"]
+    E --> F{"Derived state persisted?"}
+    F -- "Yes" --> G["Return persisted Growth Tree state"]
+    F -- "No" --> H["Keep recovery marker; return consistency failure"]
+    H --> I["Retry same completion"]
+    I --> J["Do not award XP twice; reconcile marked days"]
+    J --> G
+    G --> K["Client adopts server response"]
+```
+
 ## Reading notes
 
-- **Implementation evidence:** links point to source or tests in the [public source repository](https://github.com/Mystify7777/Halotask-Pro).
+- **Reviewed source revision:** [`e95ba08b107dcb0bd7e2941850bfb8246727b309`](https://github.com/Mystify7777/Halotask-Pro/tree/e95ba08b107dcb0bd7e2941850bfb8246727b309). Technical evidence links inside this book are pinned to this revision where the exact implementation matters, so later changes do not silently alter the basis of the narrative.
+- **Implementation evidence:** source and test files are linked from the chapters.
 - **Documentation:** README and engineering notes describe intent and recorded decisions, but do not by themselves prove production behavior.
-- **Verification boundary:** this book is based on read-only source and documentation review. No test suite was executed during this writing pass, and no production behavior was independently exercised.
+- **Verification boundary:** this edition is based on read-only source, test, changelog, and documentation review. No test suite was executed during this writing pass, and no production behavior was independently exercised.
 - **Privacy:** this book intentionally excludes demo credentials and secrets.
 - **Scope:** only the public repository is covered. No source files are modified by this documentation project.
 
