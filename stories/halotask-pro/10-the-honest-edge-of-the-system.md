@@ -1,41 +1,29 @@
 # Chapter 10: The Honest Edge of the System
 
-The strongest engineering story does not end by declaring victory. It ends by drawing a line around what the evidence supports and naming the work that would move that line.
+HaloTask Pro's engineering story is not that a task manager accumulated many features. It is that a series of features forced the system to become more precise about ownership, acknowledgement, time, and recovery.
 
-HaloTask Pro has substantial source-level machinery for offline persistence, queued mutations, account-scoped storage, session-bound requests, history reconciliation, server-owned Growth Tree awards, request validation, and session invalidation. The code and tests show that these are treated as correctness problems rather than decorative features. The queue is not simply retried on reconnect: it is compacted, tied to an account, replayed with a captured session, and tested at the request boundary.
+The source establishes several concrete mechanisms. Offline task operations are compacted and kept in per-account queues. Replay binds a user and token, and the request interceptor refuses a send if the session changed. Task history is modelled as a set of completed tasks, merged on the client before a whole per-day snapshot is written to the server. Calendar boundaries are validated against the server's clock plus a declared client offset. Growth Tree XP and the award ledger are changed together by a conditional user-document update, followed by a compare-and-set for derived streak fields, with a persisted marker for recovery if that second stage fails.
 
-But source-level design and operational behavior are different things. The repository README explicitly reports that password recovery is currently broken because of email transport complications, even though other sections list recovery as delivered. The deployed services and external email delivery have not been independently exercised during this writing pass. Deployment links establish where the project says its services live, not their current health or resilience.
+Those are meaningful design decisions, not blanket guarantees. History's server endpoint replaces the day's snapshot; it does not merge device snapshots inside MongoDB, so two devices can still race between reading and writing. Task state and Growth Tree state live in different documents, so the complete completion flow is not one atomic transaction. The tests model many edge cases, but tests were not executed for this documentation pass, and some suites use doubles rather than a live MongoDB instance.
 
-Several boundaries should remain explicit:
+There is also a clear operational mismatch in the project's public README: password recovery is listed as delivered in one section while an opening warning says the current email/OTP flow is not working. Deployed services and actual email delivery have not been independently exercised here.
 
-- **Offline queue:** pending actions are preserved through several failure classes, but this review did not establish exactly-once mutation semantics when the server commits and the response is lost.
-- **Account isolation:** user-scoped keys and bound request sessions prevent the application from casually reassigning queued work, but IndexedDB is not encrypted storage.
-- **History:** reconciliation is based on task sets and explicit removals, but caps and date handling need verification with the full test suite and realistic cross-device scenarios.
-- **Growth Tree:** the server is the durable authority, but concurrent award guarantees should be described only to the extent supported by award implementation and executed tests.
-- **Reminders:** the scheduler checks periodically in the browser and suppresses duplicate events for a session. It is not a server-side delivery system and cannot promise exact timing when the browser is suspended or closed.
-- **Password recovery:** code-level token controls exist, but the repository documents an operational failure in the email flow.
+## What the next verification pass must establish
 
-These are not reasons to dismiss the project. They are the boundaries that make a technical account credible. Reliability is not the number of features in a README. It is the behavior a system preserves under anticipated conditions, and the clarity with which it reports conditions it cannot control.
+1. Run client and server verification at a recorded commit and capture exact results, including skipped or environment-dependent tests.
+2. Exercise the ambiguous offline case where the server commits but the response is lost; determine whether retries can duplicate mutations.
+3. Use the real persistence layer to test simultaneous history pulls and writes, and decide whether server-side versioning or merge semantics are needed.
+4. Exercise concurrent Growth Tree awards and injected failures across both the XP/ledger and derived-state phases.
+5. Verify the complete password-reset flow in the deployed environment without exposing reset codes or secrets.
+6. Confirm deployment health and whether the documented backup service has an operational failover mechanism.
+7. Track the public demo-credential exposure separately in [HaloTask Pro issue #33](https://github.com/Mystify7777/Halotask-Pro/issues/33). Remove the published login pair from the source README and rotate or revoke it if still valid. This source-repository action is outside this documentation PR.
 
-## What a deeper verification pass should establish
+## Closing
 
-1. Execute client and server verification commands at a recorded commit and preserve exact results.
-2. Exercise offline create/update/delete flows, including a server commit followed by a lost response, to establish whether retries can duplicate effects.
-3. Test a real account switch during queued replay and confirm that no request or callback crosses account boundaries.
-4. Run history reconciliation scenarios with two devices, removals, stale acknowledgements, and local-midnight boundaries.
-5. Validate concurrent Growth Tree awards against the real persistence layer.
-6. Exercise the complete password-reset path in the deployed environment without disclosing reset codes or secrets.
-7. Check current deployment health and verify whether the documented backup service has an operational failover procedure.
-8. Remove the credential-like demo login from the source README and rotate or revoke it if it remains valid. This is a source-repository security action and is not part of this documentation PR.
+The strongest evidence here is not that everything is solved. It is that the code increasingly records the conditions under which a change is allowed to count as complete. A queued task is not yet an acknowledged mutation. A token is not valid merely because its signature verifies. A device that has not seen a task removed cannot declare that task absent from shared history. A tree preview is not the same as persisted progression. A successful client-side merge does not imply that a replacing server write is protected from another device's concurrent update.
 
-## Closing: the work between intention and truth
-
-HaloTask Pro's most interesting engineering theme is the distance between a user's action and a system's confirmation. The user taps once. Behind that tap, the application may need to persist intent, wait for a network, authenticate the original owner, validate a mutation, update a durable record, and reconcile the response without corrupting another session's state.
-
-The architecture is at its best when it makes those transitions explicit. The queue distinguishes pending from acknowledged. The session-bound API distinguishes the original account from whoever happens to be signed in now. History distinguishes a known removal from a task the device has never seen. The Growth Tree distinguishes a local preview from server-confirmed progress. The dashboard distinguishes a slow backend from a successful one.
-
-That is the story worth telling: not that a productivity app has many features, but that its implementation increasingly treats trust as a property of transitions between states. The remaining work is to validate those transitions under real execution and keep the product's claims aligned with what the system can actually deliver.
+The next edition should be built on executed verification and a closer account of these remaining race conditions. Until then, this is a source-backed engineering narrative, not a claim of production certification.
 
 ---
 
-[Return to the book contents](README.md) · [Source repository](https://github.com/Mystify7777/Halotask-Pro)
+[Return to the book contents](README.md) · [Source repository at reviewed revision](https://github.com/Mystify7777/Halotask-Pro/tree/e95ba08b107dcb0bd7e2941850bfb8246727b309)
