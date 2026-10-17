@@ -1,8 +1,8 @@
 # Engineering Decisions and Evidence Timeline
 
-This page summarizes architectural decisions visible in the reviewed DevLens source at [revision `f9db916d6eed0c8804a76fe6ce07d0a8efb6b4ef`](https://github.com/Mystify7777/devlens/commit/f9db916d6eed0c8804a76fe6ce07d0a8efb6b4ef). It is not a complete commit-by-commit chronology. The ADRs and research documents are the primary record for the reasoning behind the design.
+This page is a navigation index for the major architectural decisions visible at [source revision `f9db916d6eed0c8804a76fe6ce07d0a8efb6b4ef`](https://github.com/Mystify7777/devlens/commit/f9db916d6eed0c8804a76fe6ce07d0a8efb6b4ef), not a second narrative of every decision. See [Chapter 10](10-tests-adrs-and-the-cost-of-changing-contracts.md) for the React correction case study and verification matrix; the linked ADRs remain the primary decision record.
 
-## Decisions that define the system
+## Decision index
 
 - **One versioned event model:** every capture source reports through the same `DevLensEvent` contract.
 - **Synchronous EventBus:** middleware and subscriptions run synchronously; async work is opt-in at the source.
@@ -33,7 +33,7 @@ This page summarizes architectural decisions visible in the reviewed DevLens sou
 
 ## Evidence limits and open verification work
 
-The repository README reports 879 test cases and describes the packages as complete. This documentation pass did not run tests, typecheck, build, or browser scenarios, and it did not inspect a fresh CI result. The historical Session Import spec's 584/584 milestone result is recorded as a dated milestone, not as the current workspace count.
+The pinned repository README reports 879 test cases and describes the packages as complete. This documentation pass did not run tests, typecheck, build, formatting checks, browser scenarios, or inspect a fresh CI result. The Session Import spec's 584/584 result is a historical milestone from August 2026, not the current workspace count.
 
 The most important verification areas are:
 - confirm uninstall restores original browser APIs and listeners under repeated lifecycle calls;
