@@ -10,6 +10,14 @@ The best examples document why a tempting shortcut was rejected. Network capture
 
 ADRs can also be amended. ADR-0013 corrects a broad implication in ADR-0006 about React integration. That is healthy decision maintenance: the record should preserve the original reasoning and clearly identify the correction rather than leave contradictory guidance for future contributors.
 
+## Case study: React did not fit the original plugin generalization
+
+The original plugin-contract ADR grouped React with Console and Network and suggested the same `create*Plugin(bus): Plugin` factory shape for all of them. That was a reasonable-looking generalization, but it conflated two different lifecycle models: Console and Network install global hooks that need explicit restoration, while React capture is naturally attached to a component's mount/render lifecycle through an error boundary.
+
+The contradiction became visible across the ADRs: ADR-0006 described React as a conventional capture plugin, ADR-0008 described a React wrapper around the Panel, and ADR-0009 used both framings. ADR-0013 resolved the conflict in favor of a client-only, error-boundary-based capture mechanism that reports React-specific `componentStack` data through the existing EventBus. The later README at the pinned revision describes `@devlens/react` as implemented; the ADR itself preserves the earlier decision point and should be read as historical evidence, not as a claim that the package was still absent at the reviewed revision.
+
+The resulting lesson is specific: share the event-reporting contract without forcing every source into an identical lifecycle API. The correction preserves the earlier ADR wording as history and explicitly amends its implication instead of silently rewriting the decision trail. Sources: [ADR-0006](https://github.com/Mystify7777/devlens/blob/f9db916d6eed0c8804a76fe6ce07d0a8efb6b4ef/docs/adr/0006-plugin-contract.md), [ADR-0008](https://github.com/Mystify7777/devlens/blob/f9db916d6eed0c8804a76fe6ce07d0a8efb6b4ef/docs/adr/0008-panel.md), [ADR-0009](https://github.com/Mystify7777/devlens/blob/f9db916d6eed0c8804a76fe6ce07d0a8efb6b4ef/docs/adr/0009-v0.3.0-direction.md), [ADR-0013](https://github.com/Mystify7777/devlens/blob/f9db916d6eed0c8804a76fe6ce07d0a8efb6b4ef/docs/adr/0013-react-integration-role.md).
+
 ## Test structure mirrors the architecture
 
 The repository has tests for Core event handling, ring-buffer behavior, plugin contracts, Runtime, Console normalization/interception, Network classifiers/interceptors/URL normalization, Panel rendering and controls, import/export, navigation, filtering, search, and React integration. The tests are organized close to the code and frequently isolate pure helpers from browser-facing behavior.
@@ -31,6 +39,21 @@ Before treating this book as publication-ready, a fresh verification pass should
 7. End-to-end Playground checks for capture, inspection, export, and import.
 
 The browser-level tests are particularly important because mocked tests can verify wrapper logic without proving that a real browser's Fetch/XHR behavior remains unchanged across all edge cases.
+
+## Evidence matrix: three different levels of confidence
+
+The following matrix records what this book can establish from the pinned source and what still requires execution. “Implemented” means the behavior is visible in the reviewed implementation. “Covered by tests” means relevant test files exist in the repository at the pinned revision; it does not claim those tests passed in this pass. “Verified in a fresh run” is reserved for checks actually executed against a recorded revision and environment.
+
+| Claim | Implemented | Covered by tests in source tree | Verified in a fresh run for this book |
+| --- | --- | --- | --- |
+| Event model and immutability | Yes, with the documented `externallyOwned` exception | EventBus and deep-freeze test files are present | No |
+| Capture lifecycle and native API restoration | Install/uninstall paths are implemented | Runtime, Console, Network lifecycle tests are present | No browser-level run performed |
+| Network outcome classification and URL redaction | Classifiers and normalizer are implemented | Classifier/normalizer and interceptor tests are present | No |
+| Panel filtering, search, keyboard, pause/resume | Inspection features are implemented | Focused Panel tests are present | No |
+| Session import rejection before Store mutation | Validation precedes `addMany()` | Import validation and Store behavior tests are present | No |
+| Workspace readiness | Repository describes packages as complete | README reports 879 test cases | No fresh test, typecheck, build, formatting, or CI result inspected |
+
+The source paths and test inventory are the evidence for implementation and test coverage; current pass status remains unverified. Any later CI evidence should record the exact commit SHA, date, Node/pnpm versions, command, test totals, skips, and failures. A result for one revision must not silently be treated as a result for a later one.
 
 ## The engineering lesson
 
