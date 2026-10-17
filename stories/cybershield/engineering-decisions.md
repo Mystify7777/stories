@@ -30,3 +30,20 @@ The active changelog records work on server-side game-answer validation, upload 
 ## Evidence gaps
 
 The source documents call out retries, timeouts, crash recovery, and future queue/worker infrastructure. This book does not treat those as verified guarantees unless current code and tests demonstrate them. Production health, live AI integration, real external-signal behavior, end-to-end report completion, and PDF quality were not tested during this documentation pass.
+
+
+## The wider platform is part of the engineering story
+
+The reviewed source is not only a scanner. Its additional systems establish separate trust boundaries and deserve independent treatment:
+
+- **Incident reporting:** structured taxonomy, anonymous and sensitive reports, encrypted sensitive descriptions, evidence upload, public-safe projections, moderation states, and non-transactional side effects.
+- **Identity and sessions:** OTP verification and recovery flows, short-lived access tokens, refresh cookies and rotation, logout, role checks, and suspension state.
+- **AI-assisted triage:** a separately deployed FastAPI keyword heuristic called through a configured backend URL. Its fixed confidence values and deployment dependency are part of the story, not marketing footnotes.
+- **Community and awareness:** article approval, forum posts/replies, video submissions, meme voting, and admin moderation. These workflows need both content governance and ordinary application security.
+- **Gamification:** XP, levels, streaks, coins, badges, server-side game-answer validation, cooldowns, and reward update semantics.
+- **Administration and observability:** role hierarchy, report/user/content management, persistent counters, health/version/uptime endpoints, and client-error ingestion.
+- **Cross-cutting operations:** upload validation, error masking, rate limits, database indexes, bounded pagination, environment validation, frontend request ordering, and independent service deployment.
+
+These features should not be forced into one chapter called “miscellaneous.” They have different invariants and failure modes. The chapters explain each workflow and then connect them through shared concerns such as authorization, side effects, privacy, observability, and release verification.
+
+The same evidence rule applies across the book: the active changelog records intended changes, but a claim about current behavior should be checked against the implementation at the pinned source revision. Historical smoke reports are historical; planned infrastructure remains planned; tests not executed during this documentation pass are not described as reproduced.
