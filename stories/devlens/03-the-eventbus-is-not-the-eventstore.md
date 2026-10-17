@@ -14,7 +14,7 @@ The Store has a narrower role: add events, clear, read all, query by category, f
 
 The Bus replay buffer exists to preserve dispatch continuity for late subscribers. It is not the canonical full history. The Store exists to support the user-facing diagnostics experience and has a larger retention capacity.
 
-Clearing the Store does not clear the Bus replay buffer. That is intentional separation, but it creates a semantic edge that must be understood: a newly connected Store that replays old Bus history can receive events that were cleared from a previous Store. The two buffers are independent and are not presented as one transactional log.
+Clearing the Store does not clear the Bus replay buffer. The buffers are independent, not one transactional log. A stale-history effect can occur in a specific lifecycle sequence: clear one Store, then connect a Store with replay enabled while the Bus still retains earlier events. That newly connected Store may receive replayed events that were absent from the cleared Store. This is a consequence of that reconnect/replay sequence, not something that follows from every Store clear.
 
 Both use a ring buffer to keep bounded insertion efficient. A ring buffer avoids repeatedly shifting an array when the oldest item must be discarded. Once full, retention is bounded: old entries are evicted as new ones arrive. DevLens is a live diagnostics tool, not a permanent audit log.
 
