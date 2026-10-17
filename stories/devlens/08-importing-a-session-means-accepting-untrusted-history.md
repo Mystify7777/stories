@@ -21,7 +21,7 @@ The original IDs, timestamps, and serialized order must survive. Import is not a
 
 The import contract parses JSON, requires an array, validates the closed version-1 event shape, checks required field types and severity values, rejects unknown fields, checks IDs for duplicates within the batch and collisions with the Store, and deep-freezes accepted events. It also rejects imports into a non-empty Store and rejects batches larger than the Store's capacity.
 
-The order of operations is essential. If validation occurs while inserting, a malformed event late in the file could leave earlier events committed, creating a partial session. The specification requires the complete input to be validated first, then inserted through `EventStore.addMany()`. A failure must leave the Store untouched.
+The order of operations is essential. If validation occurs while inserting, a malformed event late in the file could leave earlier events committed, creating a partial session. The importer therefore validates the complete input and freezes the accepted batch before calling `EventStore.addMany()`. **The no-mutation guarantee applies to import validation failures:** rejected input must leave the Store untouched. It is not a general transaction guarantee for arbitrary exceptions thrown by Store subscribers while `addMany()` notifies them after insertion.
 
 ## Why unknown fields are rejected
 
