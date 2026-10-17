@@ -22,13 +22,13 @@ The network capture design also treats non-interference as a hard constraint. Th
 
 Captured request URLs can contain query parameters with access tokens, search terms, identifiers, or other sensitive values. The implementation canonicalizes URLs through the native URL parser: scheme and host casing normalize, default ports are removed, fragments are cleared, and relative URLs are resolved against a base URL when possible. Query parameter names are preserved while non-empty values are replaced with `***`. Empty flags remain empty.
 
-If parsing fails, the normalizer returns the raw string unchanged instead of throwing. That is an explicit trade-off: a malformed or unusual URL should not cause DevLens to interfere with the request that already happened. It also means the redaction guarantee is strongest for values the parser can successfully interpret. The fallback path should be considered when evaluating privacy expectations for malformed inputs.
+If parsing fails, the normalizer returns the raw string unchanged instead of throwing. That is a best-effort parser-failure fallback intended to avoid turning diagnostics into a request-path failure. It is also a privacy limitation: the normal redaction behavior applies to successfully parsed URLs, while a malformed input returned unchanged may still contain sensitive text. The fallback must not be described as redacted.
 
 URL normalization is a leaf utility shared by Fetch and XHR. Both interceptors use it before events reach Core, so downstream packages receive already-normalized URLs and do not need interceptor-specific logic.
 
 ## What network metadata can tell you
 
-The package records content-type and content-length metadata when exposed by the browser. It does not claim access to arbitrary response bodies, nor does it promise that every response is inspectable. Opaque responses and browser security boundaries remain real constraints. Diagnostics should report what the environment makes observable, not fabricate detail.
+The package records content-type and content-length metadata when the browser exposes them on a settled response. These fields may be `null`, including when no response exists or headers are unavailable; they are not guaranteed values on every request. The package does not claim access to arbitrary response bodies. Opaque responses and browser security boundaries remain real constraints. Diagnostics should report what the environment makes observable, not fabricate detail.
 
 ## The tests that matter
 
