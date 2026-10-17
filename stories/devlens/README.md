@@ -4,7 +4,11 @@
 
 DevLens is a framework-agnostic diagnostics engine for browser applications. It captures runtime errors, console activity, network outcomes, and React component errors, normalizes them into a shared event model, retains them in a bounded store, and presents them through a detachable overlay.
 
-The important story is not the overlay alone. It is how the system keeps capture, event distribution, storage, and presentation separate while adding harder capabilities such as request lifecycle capture, sensitive URL redaction, React integration, event inspection, and safe session import.
+The important story is how capture, distribution, retention, and presentation remain separate while the system adds network lifecycle capture, URL redaction, React integration, event inspection, and session restoration.
+
+## Who this book is for
+
+This book is for developers interested in browser instrumentation, library and package architecture, debugging tools, and how engineering decisions change when a system must observe a host application without taking it over. You do not need to have read the source repository first; the glossary below defines the recurring terms.
 
 > **Evidence boundary:** This book reviews public source at [revision `f9db916d6eed0c8804a76fe6ce07d0a8efb6b4ef`](https://github.com/Mystify7777/devlens/commit/f9db916d6eed0c8804a76fe6ce07d0a8efb6b4ef). It uses implementation files, tests, specifications, research notes, and accepted ADRs. It does not claim that tests or builds were executed during this documentation pass. Counts quoted from the README remain repository claims until independently rerun.
 
@@ -26,17 +30,31 @@ The important story is not the overlay alone. It is how the system keeps capture
 
 ```mermaid
 flowchart TD
-  R[Runtime capture] --> B[EventBus]
-  C[Console capture] --> B
-  N[Network capture] --> B
-  X[React error boundary] --> B
-  B --> S[EventStore]
-  S --> P[Panel overlay]
-  S --> E[Export]
-  I[Validated session import] --> S
+  subgraph LiveCapture[Live capture path]
+    R[Runtime capture] --> B[EventBus]
+    C[Console capture] --> B
+    N[Network capture] --> B
+    X[React error boundary] --> B
+    B -->|explicit subscription| S[EventStore]
+  end
+  subgraph Restore[Session restoration path]
+    J[Untrusted JSON] --> V[Parse and validate entire batch]
+    V --> F[Deep-freeze accepted events]
+    F -->|addMany, no Bus| S
+  end
+  S -->|read| P[Panel consumer]
+  S -->|serialize| E[Export]
 ```
 
-Capture packages report events. The EventBus normalizes and distributes them. The EventStore retains and queries them. The Panel displays the Store; export serializes its events; import validates previously exported events and inserts them directly into the Store while preserving historical identity.
+Live capture enters through the EventBus and reaches the Store only through explicit Bus-to-Store wiring. Session restoration is a separate ingress path: parse and validate the complete batch, freeze accepted events, then call `addMany()` directly. Export reads from the Store; the Panel consumes it. The Panel does not own either ingress path.
+
+## Compact glossary
+
+- **EventBus:** synchronous event reporting, middleware, subscriptions, and a bounded replay buffer.
+- **EventStore:** bounded retained history used for querying and consumption; it does not own capture.
+- **Capture plugin:** a package that observes a browser/runtime signal and reports normalized events. Global hooks use explicit install/uninstall lifecycle methods.
+- **Replay buffer:** the EventBus's recent dispatch history for late subscribers, separate from Store retention.
+- **Session import:** restoration of external event history after complete validation, not a re-capture through the live EventBus.
 
 ## Core design rules
 
@@ -50,7 +68,7 @@ Capture packages report events. The EventBus normalizes and distributes them. Th
 
 ## Review status and verification limits
 
-This is a draft for technical review. The repository README reports 879 test cases and describes Core, Runtime, Console, Panel, Network, React, and the Playground as complete. This documentation pass did not run `pnpm test`, typecheck, build, or browser end-to-end scenarios. The test count and completion status are therefore attributed to the repository, not presented as freshly reproduced results.
+This is a draft for technical review. The repository README at the pinned revision reports 879 test cases and describes Core, Runtime, Console, Panel, Network, React, and the Playground as complete. This documentation pass did not run `pnpm test`, typecheck, build, or browser end-to-end scenarios. The count and completion status remain repository-reported claims, not freshly reproduced results.
 
 Important verification areas include browser API restoration after plugin uninstall, preservation of native console behavior, Fetch/XHR edge cases, URL redaction, Shadow DOM isolation, imported-session rejection without partial mutation, and the current package/build/test state.
 
