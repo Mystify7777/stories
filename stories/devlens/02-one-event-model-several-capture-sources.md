@@ -24,6 +24,37 @@ The implementation uses a deep-freeze helper rather than relying on TypeScript's
 
 The EventBus's middleware receives a mutable draft before the final event is frozen. That allows validation or enrichment middleware to transform an event during the reporting pipeline without exposing that mutability to subscribers. Middleware is synchronous and runs in registration order; it is intentionally not a general asynchronous workflow engine.
 
+## Implementation trace: one completed Fetch request
+
+The following trace follows the actual composition points at the pinned revision. It uses a completed Fetch operation as the example; a rejected request is classified through the rejection branch, while a fulfilled HTTP response is classified through the response branch.
+
+1. **Capture settles.** The Fetch interceptor calls `handleFetchSettle(info)` after the operation settles. `createNetworkPlugin()` delegates outcome/severity classification, assembles a `CapturedRequest`, and passes it to the network normalizer.
+2. **Normalize and report.** The network package's composition point is this exact line in `packages/network/src/network.ts`:
+
+   ```ts
+   bus.report(normalizeNetworkEvent(capturedRequest));
+   ```
+
+   Source: [network.ts at the pinned revision](https://github.com/Mystify7777/devlens/blob/f9db916d6eed0c8804a76fe6ce07d0a8efb6b4ef/packages/network/src/network.ts).
+3. **Complete the Bus boundary.** `EventBus.report()` fills missing `id`, `version`, and `timestamp`, runs synchronous middleware, deep-freezes the resulting event, pushes it into the replay buffer, and dispatches it to matching subscribers. The core implementation's final operations are:
+
+   ```ts
+   const finalEvent = deepFreeze(finalDraft, seen) as DevLensEvent;
+   replayBuffer.push(finalEvent);
+   dispatchToSubscribers(finalEvent);
+   return finalEvent;
+   ```
+
+   Source: [event-bus.ts at the pinned revision](https://github.com/Mystify7777/devlens/blob/f9db916d6eed0c8804a76fe6ce07d0a8efb6b4ef/packages/core/src/event-bus.ts). The `externallyOwned` input references are intentionally excluded from deep freezing; that exception is described below.
+4. **Retain through explicit wiring.** `connectStoreToBus(bus, store)` subscribes to the Bus and forwards each event to `store.add(event)`. The Store is not implicitly coupled to the Bus. See [store-bus-connector.ts](https://github.com/Mystify7777/devlens/blob/f9db916d6eed0c8804a76fe6ce07d0a8efb6b4ef/packages/core/src/store-bus-connector.ts).
+5. **Inspect or export.** The Panel consumes the Store's retained history, while export serializes Store data. The Panel is not involved in capture and does not become a second event pipeline.
+
+This trace is intentionally narrow: it identifies the real functions and boundaries without pretending that a network request, EventBus dispatch, Store notification, and UI render form one transaction.
+
+## Deep freezing has a documented exception
+
+The Bus deep-freezes the published event graph, but the input contract supports `externallyOwned` references that are excluded from that traversal. The marker itself is removed before the event draft is built; eligible object/function references are passed to the deep-freeze helper as exclusions. This lets callers preserve ownership of explicitly external references rather than having DevLens freeze them as a side effect. The ordinary event graph remains frozen, but the guarantee is not “every reachable object is always frozen.” See [event types](https://github.com/Mystify7777/devlens/blob/f9db916d6eed0c8804a76fe6ce07d0a8efb6b4ef/packages/core/src/types.ts) and [EventBus implementation](https://github.com/Mystify7777/devlens/blob/f9db916d6eed0c8804a76fe6ce07d0a8efb6b4ef/packages/core/src/event-bus.ts).
+
 ## The trade-off
 
 A shared event schema makes downstream consumers simpler, but it can also tempt designers to flatten meaningful source differences. DevLens keeps source-specific detail in metadata/context while preserving common fields for severity, search, filtering, and display. That balance is only as good as each normalizer: if two sources encode the same concept differently, the shared Panel can still behave inconsistently.
