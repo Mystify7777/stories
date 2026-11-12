@@ -11,9 +11,15 @@ A curated, evidence-based record of the projects, engineering decisions, and con
 - Do not publish credentials, tokens, personal secrets, or other sensitive data.
 - Do not modify source repositories as part of this documentation workflow.
 
-## Organization
+## Stories
 
-Project stories will be organized by repository and project type. Substantial projects may receive detailed engineering narratives; learning collections and small exercises will be grouped into concise summaries. Collaborative repositories will document only contributions that can be substantiated.
+Substantial projects are documented as chapter-based technical books, with a contents page and one Markdown file per chapter. The narrative covers the product problem, architecture, implementation, trade-offs, chronology, tests, and limitations.
+
+- [DevLens](stories/devlens.md) — short-form engineering story; book expansion remains future work.
+- [HaloTask Pro](stories/halotask-pro/README.md) — draft book, pending review and verification.
+- [CyberShield](stories/cybershield/README.md) — draft book, pending review and verification.
+
+Drafts are not publication claims. Each book identifies the source revision reviewed and separates repository claims from checks actually performed.
 
 ## Workflow
 
